@@ -2,7 +2,7 @@
 /**
  * Plugin Name: ASF RCFG Showcase
  * Description: Verknüpft WooCommerce-Showcase-Produkte mit 3D-Trauringkonfigurator-Presets und erzeugt Arbeitskopien zur Weiterkonfiguration.
- * Version: 0.1.0
+ * Version: 0.1.2
  * Author: ASF
  * Text Domain: asf-rcfg-showcase
  */
@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('ASF_RCFG_SHOWCASE_VERSION', '0.1.0');
+define('ASF_RCFG_SHOWCASE_VERSION', '0.1.2');
 define('ASF_RCFG_SHOWCASE_DB_VERSION', '1');
 define('ASF_RCFG_SHOWCASE_FILE', __FILE__);
 define('ASF_RCFG_SHOWCASE_DIR', plugin_dir_path(__FILE__));
@@ -26,6 +26,7 @@ require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/RcfgPresetRepository.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/ShowcaseCopyRepository.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/PresetCopyService.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Frontend/ContinueConfigurationHandler.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Frontend/ConfiguratorAssets.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Integration/RcfgRestOverwriteInterceptor.php';
 
 register_activation_hook(ASF_RCFG_SHOWCASE_FILE, static function (): void {
@@ -52,5 +53,6 @@ add_action('plugins_loaded', static function (): void {
     }
 
     (new \Asf\RcfgShowcase\Frontend\ContinueConfigurationHandler())->register();
+    (new \Asf\RcfgShowcase\Frontend\ConfiguratorAssets())->register();
     (new \Asf\RcfgShowcase\Integration\RcfgRestOverwriteInterceptor())->register();
 }, 20);

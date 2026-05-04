@@ -89,11 +89,17 @@ final class ContinueConfigurationHandler
             $this->failAndRedirect($productId, $exception->getMessage());
         }
 
+        $redirectArgs = [
+            'id' => $copyId,
+            'showcase_product_id' => $productId,
+        ];
+
+        if ($this->isDebugRequest()) {
+            $redirectArgs['asf_rcfg_debug'] = '1';
+        }
+
         $redirectUrl = add_query_arg(
-            [
-                'id' => $copyId,
-                'showcase_product_id' => $productId,
-            ],
+            $redirectArgs,
             $this->getConfiguratorUrl()
         );
 
@@ -125,11 +131,17 @@ final class ContinueConfigurationHandler
     {
         $productId = $product->get_id();
 
+        $args = [
+            'action' => self::ACTION,
+            'product_id' => $productId,
+        ];
+
+        if ($this->isDebugRequest()) {
+            $args['asf_rcfg_debug'] = '1';
+        }
+
         $url = add_query_arg(
-            [
-                'action' => self::ACTION,
-                'product_id' => $productId,
-            ],
+            $args,
             admin_url('admin-post.php')
         );
 
@@ -171,6 +183,12 @@ final class ContinueConfigurationHandler
         $customerId = WC()->session->get_customer_id();
 
         return $customerId ? (string) $customerId : null;
+    }
+
+    private function isDebugRequest(): bool
+    {
+        return isset($_GET['asf_rcfg_debug'])
+            && sanitize_text_field(wp_unslash((string) $_GET['asf_rcfg_debug'])) === '1';
     }
 
     private function redirectToLogin(int $productId): void
