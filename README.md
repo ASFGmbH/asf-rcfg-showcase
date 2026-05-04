@@ -20,3 +20,11 @@ Geplanter Ablauf:
 - WooCommerce
 - 3D-Trauringkonfigurator
 - RingPreisrechner Plugin v2
+
+## Aktueller Funktionsstand
+
+- WooCommerce-Produkte können als RCFG Showcase-Produkte markiert werden.
+- Pro Produkt kann eine RCFG Template-ID hinterlegt werden.
+- Auf aktivierten Produktseiten erscheint der Button „Weiter konfigurieren“.
+- Beim Klick wird eine neue Arbeitskopie des hinterlegten Presets erzeugt.
+- Die Weiterleitung erfolgt auf `/ringkonfiguration/?id=NEUE-ID`.
