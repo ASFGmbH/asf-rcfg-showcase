@@ -18,18 +18,24 @@ define('ASF_RCFG_SHOWCASE_FILE', __FILE__);
 define('ASF_RCFG_SHOWCASE_DIR', plugin_dir_path(__FILE__));
 define('ASF_RCFG_SHOWCASE_URL', plugin_dir_url(__FILE__));
 
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ProductFields.php';
+
 add_action('plugins_loaded', static function (): void {
     if (!class_exists('WooCommerce')) {
         add_action('admin_notices', static function (): void {
             echo '<div class="notice notice-error"><p><strong>ASF RCFG Showcase:</strong> WooCommerce ist nicht aktiv.</p></div>';
         });
+
         return;
     }
 
     if (!defined('ONE_RCFG_REST_NAMESPACE')) {
         add_action('admin_notices', static function (): void {
-            echo '<div class="notice notice-warning"><p><strong>ASF RCFG Showcase:</strong> Der 3D-Trauringkonfigurator wurde nicht erkannt.</p></div>';
+            echo '<div class="notice notice-warning"><p><strong>ASF RCFG Showcase:</strong> Der 3D-Trauringkonfigurator wurde nicht erkannt. Die Showcase-Felder sind sichtbar, die Konfigurator-Funktionen stehen aber erst nach Aktivierung des 3D-Plugins zur Verfügung.</p></div>';
         });
-        return;
+    }
+
+    if (is_admin()) {
+        (new \Asf\RcfgShowcase\Admin\ProductFields())->register();
     }
 }, 20);
