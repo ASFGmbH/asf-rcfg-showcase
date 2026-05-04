@@ -22,6 +22,8 @@ define('ASF_RCFG_SHOWCASE_URL', plugin_dir_url(__FILE__));
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Installer/Activator.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Infrastructure/TableNames.php';
 
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Import/ImportClient.php';
+
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ProductFields.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ImportPage.php';
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Asf\RcfgShowcase\Admin;
 
+use Asf\RcfgShowcase\Service\Import\ImportClient;
+use Throwable;
+
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -16,13 +19,17 @@ final class ImportPage
     private const RESULT_TRANSIENT_PREFIX = 'asf_rcfg_showcase_import_result_';
 
     /**
-     * Platzhalter für die festverdrahtete Import-URL.
+     * Festverdrahtete Import-URL.
      *
-     * Diese URL wird im nächsten Commit vom ImportClient verwendet.
-     * Sobald der API-Endpunkt im RingPreisrechner-V2-Dashboard final steht,
-     * wird nur dieser Wert angepasst.
+     * Diese URL muss später auf den API-Endpunkt im RingPreisrechner-V2-Dashboard zeigen.
+     * Das Showcase-Plugin stellt diesen Endpoint nicht selbst bereit, sondern konsumiert ihn nur.
      */
     private const IMPORT_URL = 'https://dashboard.asf.gmbh/api/rcfg-showcase-products';
+
+    public function __construct(
+        private readonly ?ImportClient $importClient = null
+    ) {
+    }
 
     public function register(): void
     {
@@ -53,13 +60,13 @@ final class ImportPage
         echo '<div class="wrap">';
         echo '<h1>ASF RCFG Showcase Import</h1>';
 
-        echo '<p>Diese Seite bereitet den Import von Showcase-Artikeln aus dem RingPreisrechner-V2-Dashboard vor.</p>';
+        echo '<p>Diese Seite importiert Showcase-Artikel aus dem RingPreisrechner-V2-Dashboard.</p>';
 
         if ($result !== null) {
             $noticeClass = $result['type'] === 'error' ? 'notice notice-error' : 'notice notice-success';
 
             echo '<div class="' . esc_attr($noticeClass) . ' is-dismissible">';
-            echo '<p>' . esc_html($result['message']) . '</p>';
+            echo '<p>' . wp_kses_post($result['message']) . '</p>';
             echo '</div>';
         }
 
@@ -67,7 +74,7 @@ final class ImportPage
         echo '<h2>Importquelle</h2>';
         echo '<p>Die Import-URL ist aktuell fest im Plugin hinterlegt:</p>';
         echo '<code>' . esc_html(self::IMPORT_URL) . '</code>';
-        echo '<p style="margin-top: 12px;">Der eigentliche API-Client und das WooCommerce-Mapping werden in den nächsten Commits ergänzt.</p>';
+        echo '<p style="margin-top: 12px;">In diesem Schritt wird die JSON-Antwort nur abgerufen und validiert. Das WooCommerce-Mapping folgt im nächsten Commit.</p>';
         echo '</div>';
 
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-top: 20px;">';
@@ -85,17 +92,10 @@ final class ImportPage
 
         echo '<hr>';
 
-        echo '<h2>Geplanter Importablauf</h2>';
-        echo '<ol>';
-        echo '<li>API-URL im RingPreisrechner-V2-Dashboard aufrufen.</li>';
-        echo '<li>JSON-Antwort validieren.</li>';
-        echo '<li>Artikel anhand SKU oder externer ID in WooCommerce suchen.</li>';
-        echo '<li>Nicht vorhandene Artikel erstellen.</li>';
-        echo '<li>Vorhandene Artikel aktualisieren.</li>';
-        echo '<li>Showcase-Meta setzen: aktiv + RCFG Template-ID.</li>';
-        echo '<li>Artikel veröffentlichen.</li>';
-        echo '<li>Importbericht ausgeben.</li>';
-        echo '</ol>';
+        echo '<h2>Erwartetes JSON-Format</h2>';
+        echo '<pre style="background: #fff; padding: 12px; border: 1px solid #ccd0d4; overflow:auto; max-width: 900px;">';
+        echo esc_html($this->getExampleJson());
+        echo '</pre>';
 
         echo '</div>';
     }
@@ -108,13 +108,68 @@ final class ImportPage
 
         check_admin_referer(self::NONCE_ACTION);
 
-        $this->storeResultMessage(
-            'success',
-            'Import-Button wurde erfolgreich ausgelöst. Der externe API-Client wird im nächsten Commit angebunden.'
-        );
+        try {
+            $result = $this->getImportClient()->fetchAndValidate();
+
+            $this->storeResultMessage(
+                'success',
+                $this->formatSuccessMessage($result)
+            );
+        } catch (Throwable $exception) {
+            $this->storeResultMessage(
+                'error',
+                'Import fehlgeschlagen: ' . esc_html($exception->getMessage())
+            );
+        }
 
         wp_safe_redirect($this->getPageUrl());
         exit;
+    }
+
+    private function getImportClient(): ImportClient
+    {
+        return $this->importClient ?? new ImportClient(self::IMPORT_URL);
+    }
+
+    /**
+     * @param array{
+     *     success: bool,
+     *     generated_at: string|null,
+     *     count: int,
+     *     items: array<int, array<string, mixed>>,
+     *     warnings: array<int, string>
+     * } $result
+     */
+    private function formatSuccessMessage(array $result): string
+    {
+        $message = sprintf(
+            'Import-JSON erfolgreich geladen und validiert. Gültige Artikel: <strong>%d</strong>.',
+            (int) $result['count']
+        );
+
+        if (!empty($result['generated_at'])) {
+            $message .= '<br>Generiert am: <code>' . esc_html((string) $result['generated_at']) . '</code>';
+        }
+
+        if (!empty($result['items'][0]['sku'])) {
+            $message .= '<br>Erster gültiger Artikel: <code>' . esc_html((string) $result['items'][0]['sku']) . '</code>';
+        }
+
+        if (!empty($result['warnings'])) {
+            $message .= '<br><br><strong>Warnungen:</strong><ul>';
+
+            foreach (array_slice($result['warnings'], 0, 10) as $warning) {
+                $message .= '<li>' . esc_html((string) $warning) . '</li>';
+            }
+
+            if (count($result['warnings']) > 10) {
+                $message .= '<li>Weitere Warnungen wurden aus Platzgründen ausgeblendet.</li>';
+            }
+
+            $message .= '</ul>';
+        }
+
+        return $message;
     }
 
     private function getPageUrl(): string
@@ -169,5 +224,44 @@ final class ImportPage
             'type' => $type,
             'message' => $message,
         ];
+    }
+
+    private function getExampleJson(): string
+    {
+        return <<<'JSON'
+{
+  "success": true,
+  "generated_at": "2026-05-05T12:00:00+02:00",
+  "items": [
+    {
+      "external_id": "RPR-C006-001",
+      "sku": "SHOWCASE-C006",
+      "title": "Trauringe C006",
+      "slug": "trauringe-c006",
+      "status": "publish",
+      "template_id": "YITG-6KPT",
+      "regular_price": "499.00",
+      "short_description": "Kurzbeschreibung für die Produktübersicht.",
+      "description": "Ausführliche Beschreibung des Showcase-Artikels.",
+      "attributes": [
+        {
+          "name": "Material",
+          "value": "Edelstahl",
+          "visible": true
+        },
+        {
+          "name": "Profil",
+          "value": "3",
+          "visible": true
+        }
+      ],
+      "meta": {
+        "source_model": "C006",
+        "source_system": "ring-preisrechner-v2"
+      }
+    }
+  ]
+}
+JSON;
     }
 }
