@@ -15,6 +15,7 @@ final class Activator
     public static function activate(): void
     {
         self::createCopyTable();
+        self::createRingImageNoCacheHtaccess();
 
         update_option('asf_rcfg_showcase_db_version', ASF_RCFG_SHOWCASE_DB_VERSION, false);
     }
@@ -46,5 +47,52 @@ final class Activator
         ) {$charsetCollate};";
 
         dbDelta($sql);
+    }
+
+    private static function createRingImageNoCacheHtaccess(): void
+    {
+        $uploadDir = wp_upload_dir();
+
+        if (!empty($uploadDir['error'])) {
+            return;
+        }
+
+        $targetDir = trailingslashit((string) $uploadDir['basedir']) . 'ringkonfiguration/';
+
+        if (!wp_mkdir_p($targetDir)) {
+            return;
+        }
+
+        $htaccessPath = $targetDir . '.htaccess';
+
+        $content = <<<HTACCESS
+# ASF RCFG Showcase
+# Generated configurator preview images are overwritten under the same filename.
+# Force browsers/proxies to revalidate them.
+
+<IfModule mod_headers.c>
+    <FilesMatch "\\.(png|jpg|jpeg|webp)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive Off
+</IfModule>
+
+HTACCESS;
+
+        if (!file_exists($htaccessPath)) {
+            file_put_contents($htaccessPath, $content);
+            return;
+        }
+
+        $existing = (string) file_get_contents($htaccessPath);
+
+        if (!str_contains($existing, 'ASF RCFG Showcase')) {
+            file_put_contents($htaccessPath, "\n" . $content, FILE_APPEND);
+        }
     }
 }
