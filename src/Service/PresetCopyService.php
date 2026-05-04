@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Asf\RcfgShowcase\Service;
 
-use Asf\RcfgShowcase\Infrastructure\TableNames;
 use Asf\RcfgShowcase\Repository\RcfgPresetRepository;
+use Asf\RcfgShowcase\Repository\ShowcaseCopyRepository;
 use RuntimeException;
 
 if (!defined('ABSPATH')) {
@@ -15,7 +15,8 @@ if (!defined('ABSPATH')) {
 final class PresetCopyService
 {
     public function __construct(
-        private readonly RcfgPresetRepository $presetRepository = new RcfgPresetRepository()
+        private readonly RcfgPresetRepository $presetRepository = new RcfgPresetRepository(),
+        private readonly ShowcaseCopyRepository $copyRepository = new ShowcaseCopyRepository()
     ) {
     }
 
@@ -46,7 +47,7 @@ final class PresetCopyService
         $copyId = $this->createUniqueRcfgId();
 
         $this->presetRepository->insertPresetCopy($copyId, $templatePreset, $userId);
-        $this->insertCopyMapping($copyId, $templateId, $productId, $userId, $sessionId);
+        $this->copyRepository->insertCopyMapping($copyId, $templateId, $productId, $userId, $sessionId);
 
         return $copyId;
     }
@@ -87,40 +88,6 @@ final class PresetCopyService
         };
 
         return $chunk() . '-' . $chunk();
-    }
-
-    private function insertCopyMapping(string $copyId, string $templateId, int $productId, int $userId, ?string $sessionId): void
-    {
-        global $wpdb;
-
-        $tableName = TableNames::showcaseCopy();
-        $now = current_time('mysql');
-
-        $inserted = $wpdb->insert(
-            $tableName,
-            [
-                'copy_id' => $copyId,
-                'template_id' => $templateId,
-                'product_id' => $productId,
-                'user_id' => $userId,
-                'session_id' => $sessionId,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                '%s',
-                '%s',
-                '%d',
-                '%d',
-                '%s',
-                '%s',
-                '%s',
-            ]
-        );
-
-        if ($inserted === false) {
-            throw new RuntimeException('Die RCFG-Arbeitskopie konnte nicht in der Showcase-Mapping-Tabelle vermerkt werden.');
-        }
     }
 
     private function normalizePresetId(string $presetId): string

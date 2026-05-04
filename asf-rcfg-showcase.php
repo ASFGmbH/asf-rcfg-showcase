@@ -23,8 +23,10 @@ require_once ASF_RCFG_SHOWCASE_DIR . 'src/Installer/Activator.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Infrastructure/TableNames.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ProductFields.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/RcfgPresetRepository.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/ShowcaseCopyRepository.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/PresetCopyService.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Frontend/ContinueConfigurationHandler.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Integration/RcfgRestOverwriteInterceptor.php';
 
 register_activation_hook(ASF_RCFG_SHOWCASE_FILE, static function (): void {
     \Asf\RcfgShowcase\Installer\Activator::activate();
@@ -50,4 +52,5 @@ add_action('plugins_loaded', static function (): void {
     }
 
     (new \Asf\RcfgShowcase\Frontend\ContinueConfigurationHandler())->register();
+    (new \Asf\RcfgShowcase\Integration\RcfgRestOverwriteInterceptor())->register();
 }, 20);
