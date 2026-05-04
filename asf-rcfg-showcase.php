@@ -14,11 +14,20 @@ if (!defined('ABSPATH')) {
 }
 
 define('ASF_RCFG_SHOWCASE_VERSION', '0.1.0');
+define('ASF_RCFG_SHOWCASE_DB_VERSION', '1');
 define('ASF_RCFG_SHOWCASE_FILE', __FILE__);
 define('ASF_RCFG_SHOWCASE_DIR', plugin_dir_path(__FILE__));
 define('ASF_RCFG_SHOWCASE_URL', plugin_dir_url(__FILE__));
 
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Installer/Activator.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Infrastructure/TableNames.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ProductFields.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/RcfgPresetRepository.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/PresetCopyService.php';
+
+register_activation_hook(ASF_RCFG_SHOWCASE_FILE, static function (): void {
+    \Asf\RcfgShowcase\Installer\Activator::activate();
+});
 
 add_action('plugins_loaded', static function (): void {
     if (!class_exists('WooCommerce')) {
