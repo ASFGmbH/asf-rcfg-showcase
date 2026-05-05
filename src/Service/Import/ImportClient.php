@@ -15,9 +15,13 @@ final class ImportClient
 {
     private const MAX_RESPONSE_BYTES = 5242880; // 5 MB
 
+    private PimRingProductNormalizer $normalizer;
+
     public function __construct(
-        private readonly string $importUrl
+        private readonly string $importUrl,
+        ?PimRingProductNormalizer $normalizer = null
     ) {
+        $this->normalizer = $normalizer ?? new PimRingProductNormalizer();
     }
 
     /**
@@ -112,7 +116,10 @@ final class ImportClient
             }
 
             try {
-                $items[] = $this->validateItem($rawItem, (int) $index);
+                $normalized = $this->normalizer->normalize($rawItem, (int) $index);
+                $this->validateNormalizedItem($normalized, (int) $index, $warnings);
+
+                $items[] = $normalized;
             } catch (RuntimeException $exception) {
                 $warnings[] = $exception->getMessage();
             }
@@ -133,164 +140,65 @@ final class ImportClient
 
     /**
      * @param array<string, mixed> $item
-     * @return array<string, mixed>
+     * @param string[] $warnings
      */
-    private function validateItem(array $item, int $index): array
+    private function validateNormalizedItem(array $item, int $index, array &$warnings): void
     {
-        $sku = $this->stringValue($item, 'sku');
-        $externalId = $this->stringValue($item, 'external_id');
-        $title = $this->stringValue($item, 'title');
-        $templateId = strtoupper($this->stringValue($item, 'template_id'));
-
-        if ($sku === '' && $externalId === '') {
-            throw new RuntimeException(sprintf(
-                'Eintrag #%d wurde übersprungen: Es fehlt "sku" oder "external_id".',
-                $index
-            ));
+        foreach (['external_id', 'sku', 'product_type', 'model', 'title'] as $requiredKey) {
+            if (empty($item[$requiredKey]) || !is_scalar($item[$requiredKey])) {
+                throw new RuntimeException(sprintf(
+                    'Eintrag #%d wurde übersprungen: "%s" fehlt.',
+                    $index,
+                    $requiredKey
+                ));
+            }
         }
 
-        if ($sku === '') {
-            $sku = 'SHOWCASE-' . sanitize_key($externalId);
-            $sku = strtoupper(str_replace('_', '-', $sku));
-        }
-
-        if ($externalId === '') {
-            $externalId = $sku;
-        }
-
-        if ($title === '') {
-            throw new RuntimeException(sprintf(
-                'Eintrag #%d "%s" wurde übersprungen: Es fehlt "title".',
-                $index,
-                $sku
-            ));
-        }
-
-        if ($templateId === '') {
-            throw new RuntimeException(sprintf(
-                'Eintrag #%d "%s" wurde übersprungen: Es fehlt "template_id".',
-                $index,
-                $sku
-            ));
-        }
-
-        if (!$this->isValidTemplateId($templateId)) {
-            throw new RuntimeException(sprintf(
-                'Eintrag #%d "%s" wurde übersprungen: template_id "%s" hat ein ungültiges Format.',
-                $index,
-                $sku,
-                $templateId
-            ));
-        }
-
-        $status = $this->stringValue($item, 'status');
-
-        if ($status === '') {
-            $status = 'publish';
-        }
+        $status = isset($item['status']) && is_scalar($item['status']) ? (string) $item['status'] : 'publish';
 
         if (!in_array($status, ['publish', 'draft', 'private'], true)) {
             throw new RuntimeException(sprintf(
                 'Eintrag #%d "%s" wurde übersprungen: status "%s" ist nicht erlaubt.',
                 $index,
-                $sku,
+                (string) $item['sku'],
                 $status
             ));
         }
 
-        $regularPrice = $this->stringValue($item, 'regular_price');
+        $templateId = isset($item['template_id']) && is_scalar($item['template_id'])
+            ? trim((string) $item['template_id'])
+            : '';
 
-        if ($regularPrice !== '') {
-            $normalizedPrice = str_replace(',', '.', $regularPrice);
-
-            if (!is_numeric($normalizedPrice) || (float) $normalizedPrice < 0) {
-                throw new RuntimeException(sprintf(
-                    'Eintrag #%d "%s" wurde übersprungen: regular_price "%s" ist ungültig.',
-                    $index,
-                    $sku,
-                    $regularPrice
-                ));
-            }
-
-            $regularPrice = number_format((float) $normalizedPrice, 2, '.', '');
+        if ($templateId !== '' && !$this->isValidTemplateId($templateId)) {
+            throw new RuntimeException(sprintf(
+                'Eintrag #%d "%s" wurde übersprungen: template_id "%s" hat ein ungültiges Format.',
+                $index,
+                (string) $item['sku'],
+                $templateId
+            ));
         }
 
-        $attributes = $this->normalizeAttributes($item['attributes'] ?? []);
-        $meta = is_array($item['meta'] ?? null) ? $item['meta'] : [];
+        $capabilities = is_array($item['capabilities'] ?? null) ? $item['capabilities'] : [];
 
-        return [
-            'external_id' => $externalId,
-            'sku' => $sku,
-            'title' => $title,
-            'slug' => sanitize_title($this->stringValue($item, 'slug')),
-            'status' => $status,
-            'template_id' => $templateId,
-            'regular_price' => $regularPrice,
-            'short_description' => $this->stringValue($item, 'short_description'),
-            'description' => $this->stringValue($item, 'description'),
-            'attributes' => $attributes,
-            'meta' => $meta,
-            'raw' => $item,
-        ];
-    }
-
-    /**
-     * @param mixed $attributes
-     * @return array<int, array{name:string,value:string,visible:bool}>
-     */
-    private function normalizeAttributes(mixed $attributes): array
-    {
-        if (!is_array($attributes)) {
-            return [];
+        if (($capabilities['showcase'] ?? false) === true && $templateId === '') {
+            $warnings[] = sprintf(
+                'Eintrag #%d "%s": Showcase ist aktiv, aber es fehlt noch eine template_id. Das Produkt kann importiert werden, aber der 3D-Weiterkonfigurieren-Flow ist erst nach Mapping einer Template-ID nutzbar.',
+                $index,
+                (string) $item['sku']
+            );
         }
 
-        $normalized = [];
-
-        foreach ($attributes as $key => $attribute) {
-            if (is_array($attribute)) {
-                $name = isset($attribute['name']) && is_scalar($attribute['name'])
-                    ? trim((string) $attribute['name'])
-                    : '';
-
-                $value = isset($attribute['value']) && is_scalar($attribute['value'])
-                    ? trim((string) $attribute['value'])
-                    : '';
-
-                $visible = !array_key_exists('visible', $attribute) || (bool) $attribute['visible'];
-            } else {
-                $name = is_string($key) ? trim($key) : '';
-                $value = is_scalar($attribute) ? trim((string) $attribute) : '';
-                $visible = true;
-            }
-
-            if ($name === '' || $value === '') {
-                continue;
-            }
-
-            $normalized[] = [
-                'name' => $name,
-                'value' => $value,
-                'visible' => $visible,
-            ];
+        if (empty($item['main_image_url'])) {
+            $warnings[] = sprintf(
+                'Eintrag #%d "%s": Es konnte keine Hauptbild-URL aus den Importdaten abgeleitet werden.',
+                $index,
+                (string) $item['sku']
+            );
         }
-
-        return $normalized;
-    }
-
-    /**
-     * @param array<string, mixed> $source
-     */
-    private function stringValue(array $source, string $key): string
-    {
-        if (!array_key_exists($key, $source) || !is_scalar($source[$key])) {
-            return '';
-        }
-
-        return trim((string) $source[$key]);
     }
 
     private function isValidTemplateId(string $templateId): bool
     {
-        return (bool) preg_match('/^[A-Z0-9]{4}-[A-Z0-9]{4}(?:-\d+)?$/', $templateId);
+        return (bool) preg_match('/^[A-Z0-9]{4}-[A-Z0-9]{4}(?:-\d+)?$/', strtoupper(trim($templateId)));
     }
 }

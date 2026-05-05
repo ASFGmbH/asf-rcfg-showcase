@@ -92,7 +92,7 @@ final class ImportPage
 
         echo '<hr>';
 
-        echo '<h2>Erwartetes JSON-Format</h2>';
+        echo '<h2>Erwartetes PIM-/Import-JSON-Format</h2>';
         echo '<pre style="background: #fff; padding: 12px; border: 1px solid #ccd0d4; overflow:auto; max-width: 900px;">';
         echo esc_html($this->getExampleJson());
         echo '</pre>';
@@ -234,31 +234,35 @@ final class ImportPage
   "generated_at": "2026-05-05T12:00:00+02:00",
   "items": [
     {
-      "external_id": "RPR-C006-001",
-      "sku": "SHOWCASE-C006",
-      "title": "Trauringe C006",
-      "slug": "trauringe-c006",
-      "status": "publish",
+      "oo_id": 23292,
+      "customfield_asf_model": "TR001",
+      "customfield_asf_type": "Trauring",
+      "category": "Eheringe",
+      "manufacturer": "ASF-Trauringe",
+      "customfield_asf_material": "gelbgold-weissgold",
+      "customfield_asf_alloy": "333er",
+      "customfield_asf_surface": "po;lm;sam;qm;scm;em;xm;hpo;hma;",
+      "customfield_asf_default_surface": "lm",
+      "customfield_asf_stones": "1x0.03",
+      "customfield_asf_default_stone": "Diamant",
+      "customfield_asf_stone_colors": "weiß;apple-green;baby-pink;canary-yellow;cognac-brown;orange;schwarz;sky-blue;",
+      "customfield_asf_mount": ",Einreiber,",
+      "customfield_asf_gap": "Konvex Fuge",
+      "customfield_asf_gap_width": 1,
+      "profil": 3,
+      "customfield_asf_minManWidth": "3",
+      "customfield_asf_maxManWidth": "15",
+      "customfield_asf_minWomanWidth": "3",
+      "customfield_asf_maxWomanWidth": "15",
+      "customfield_asf_default_width": "5",
+      "customfield_asf_minWomanStrength": "1.2",
+      "customfield_asf_maxWomanStrength": "4",
+      "customfield_asf_minManStrength": "1.4",
+      "customfield_asf_maxManStrength": "4",
+      "customfield_asf_default_strength": "1.4",
+      "customfield_asf_noEngraving": 0,
       "template_id": "YITG-6KPT",
-      "regular_price": "499.00",
-      "short_description": "Kurzbeschreibung für die Produktübersicht.",
-      "description": "Ausführliche Beschreibung des Showcase-Artikels.",
-      "attributes": [
-        {
-          "name": "Material",
-          "value": "Edelstahl",
-          "visible": true
-        },
-        {
-          "name": "Profil",
-          "value": "3",
-          "visible": true
-        }
-      ],
-      "meta": {
-        "source_model": "C006",
-        "source_system": "ring-preisrechner-v2"
-      }
+      "desc": "Diese schicken Eheringe aus {customfield_asf_material} wirken an jeder Hand schön. Das Modell {customfield_asf_model} wird aus einer {customfield_asf_alloy} Legierung gefertigt."
     }
   ]
 }
