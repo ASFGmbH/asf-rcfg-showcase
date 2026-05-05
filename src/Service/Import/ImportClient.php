@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Asf\RcfgShowcase\Service\Import;
 
+use Asf\RcfgShowcase\Service\Pricing\RingPriceCalculatorAdapter;
 use RuntimeException;
 use Throwable;
 
@@ -16,12 +17,15 @@ final class ImportClient
     private const MAX_RESPONSE_BYTES = 5242880; // 5 MB
 
     private PimRingProductNormalizer $normalizer;
+    private RingPriceCalculatorAdapter $priceCalculator;
 
     public function __construct(
         private readonly string $importUrl,
-        ?PimRingProductNormalizer $normalizer = null
+        ?PimRingProductNormalizer $normalizer = null,
+        ?RingPriceCalculatorAdapter $priceCalculator = null
     ) {
         $this->normalizer = $normalizer ?? new PimRingProductNormalizer();
+        $this->priceCalculator = $priceCalculator ?? new RingPriceCalculatorAdapter();
     }
 
     /**
@@ -118,6 +122,19 @@ final class ImportClient
             try {
                 $normalized = $this->normalizer->normalize($rawItem, (int) $index);
                 $this->validateNormalizedItem($normalized, (int) $index, $warnings);
+
+                $priceResult = $this->priceCalculator->calculateImportPrice($normalized);
+                $normalized['price_result'] = $priceResult;
+                $normalized['regular_price'] = $priceResult['formatted_price'];
+
+                foreach ($priceResult['warnings'] as $priceWarning) {
+                    $warnings[] = sprintf(
+                        'Eintrag #%d "%s": %s',
+                        (int) $index,
+                        (string) ($normalized['sku'] ?? ''),
+                        $priceWarning
+                    );
+                }
 
                 $items[] = $normalized;
             } catch (RuntimeException $exception) {

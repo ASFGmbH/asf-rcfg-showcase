@@ -25,15 +25,20 @@ require_once ASF_RCFG_SHOWCASE_DIR . 'src/Infrastructure/TableNames.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Domain/RingProductType.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Domain/RingProductCapabilities.php';
 
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/RcfgPresetRepository.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/RcfgSettingsRepository.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/ShowcaseCopyRepository.php';
+
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Pricing/RcfgDefaultPresetRepository.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Pricing/PimItemPresetFactory.php';
+require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Pricing/RingPriceCalculatorAdapter.php';
+
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Import/CdnImageUrlBuilder.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Import/PimRingProductNormalizer.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/Import/ImportClient.php';
 
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ProductFields.php';
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Admin/ImportPage.php';
-
-require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/RcfgPresetRepository.php';
-require_once ASF_RCFG_SHOWCASE_DIR . 'src/Repository/ShowcaseCopyRepository.php';
 
 require_once ASF_RCFG_SHOWCASE_DIR . 'src/Service/PresetCopyService.php';
 
